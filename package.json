@@ -1,0 +1,17 @@
+{
+  "name": "image-bounding-box-cropper",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Yves Meili",
+  "license": "ISC",
+  "devDependencies": {
+    "async": "^2.5.0",
+    "gm": "^1.23.0",
+    "mkdirp": "^0.5.1",
+    "svg-to-png": "^3.1.2"
+  }
+}
