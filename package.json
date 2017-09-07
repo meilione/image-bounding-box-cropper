@@ -9,9 +9,11 @@
   "author": "Yves Meili",
   "license": "ISC",
   "devDependencies": {
+    "array-unique": "^0.3.2",
     "async": "^2.5.0",
     "gm": "^1.23.0",
     "mkdirp": "^0.5.1",
-    "svg-to-png": "^3.1.2"
+    "svg-to-png": "^3.1.2",
+    "svg2png": "^4.1.1"
   }
 }

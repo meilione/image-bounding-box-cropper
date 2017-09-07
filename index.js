@@ -9,7 +9,9 @@
 
 var path = require('path');
 var mkdirp = require('mkdirp');
-var async = require("async");
+var async = require('async');
+const svg2png = require("svg2png");
+var unique = require('array-unique');
 var fs = require('fs')
   , gm = require('gm').subClass({imageMagick: false});
 
@@ -22,16 +24,16 @@ var borderThicknessY = borderThicknessX;
 var outterWidth = null;
 var outterHeight = null;
 
-var square = true;
+var square = false;
 var grayscale = true;
 
-var trimFuzz = 20;
-var trimFuzzPercentage = 100;
+var trimFuzz = 5;
+var trimFuzzPercentage = 80;
 
 var scaleUp = true; //if true then it scales half of the images up
 
-var inputFolder  = './data';
-var outputFolder = './data/output';
+var inputFolder  = __dirname + '/data';
+var outputFolder = __dirname + '/output';
 
 var outPrefix = ''; //opt_
 
@@ -39,31 +41,72 @@ var filesToProcess = [];
 
 var asyncLimit = 10;
 
-/*
-* Get Files
-*/
-fs.readdirSync(inputFolder).forEach(file => {
-  if (!file) {
-    return;
-  }
-  if (fs.lstatSync(inputFolder + '/' +file).isDirectory()) {
-    return;
-  }
-  filesToProcess.push(file);
-  console.log(file);
-});
+var allowedExt = ['.png','.jpg','.jpeg','.gif','.svg'];
 
-if (!fs.existsSync(outputFolder)) {
-  mkdirp(outputFolder, function(err) { 
-    console.log('Error creating output folder: ' + outputFolder + ' ' + err);
+/*
+* Process
+*/
+createOutputFolder()
+  .then(loadFiles)
+  .then(getImageSizes)
+  .then(convert)
+
+/*
+* Folder Processing
+*/
+function createOutputFolder() {
+  if (!fs.existsSync(outputFolder)) {
+    mkdirp(outputFolder, function(err) { 
+      console.log('Error creating output folder: ' + outputFolder + ' ' + err);
+    });
+  }
+  return Promise.resolve();
+}
+
+function loadFiles() {
+  return new Promise(function (resolve,reject) {
+    var folderFiles = fs.readdirSync(inputFolder);
+    async.eachLimit(folderFiles, asyncLimit, function (file, callback) {
+
+      var fileExt = path.extname(inputFolder + '/' + file).toLowerCase();
+
+      if (!file) {
+        callback();
+        return;
+      }
+      if (fs.lstatSync(inputFolder + '/' + file).isDirectory()) {
+        callback();
+        return;
+      }
+
+      if (allowedExt.indexOf(fileExt) === -1) {
+        callback();
+        return;
+      }
+
+      //convert svgs to images
+      if (fileExt == '.svg') {
+        var tmpIn = inputFolder + '/' + file;
+        var tmpOut = inputFolder + '/' + file.replace('.svg','.png');
+        const outputBuffer = svg2png.sync(fs.readFileSync(tmpIn), { width: innerWidth, height: innerHeight});
+        fs.writeFileSync(tmpOut, outputBuffer);
+        file = file.replace('.svg','.png');
+      }
+
+      filesToProcess.push(file);
+      callback();
+
+    }, function (err, results) {
+      unique(filesToProcess);
+      resolve(filesToProcess);
+    });
   });
 }
 
-
 /*
-* Process files
+* Image Processing
 */
-getImageSizes().then(function () {
+function convert() {
   console.log('innerWidth: ' + innerWidth);
   console.log('innerHeight: ' + innerHeight);
 
@@ -77,12 +120,8 @@ getImageSizes().then(function () {
 
   processImages();
 
-});
+}
 
-
-/*
-* Image Processing
-*/
 function getImageSizes() {
   return new Promise(function (resolve, reject) {
 
@@ -155,9 +194,7 @@ function convertImage(currentImage, outputImage) {
   img.extent(outterWidth, outterHeight);
 
   img.write(outputImage, function (err) {
-    if (!err) { 
-      console.log('done');
-    } else {
+    if (err) { 
       console.log(err);
     }
   });
